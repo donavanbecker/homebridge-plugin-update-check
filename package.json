@@ -27,13 +27,13 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/Sunoo/homebridge-plugin-update-check#readme",
+  "homepage": "https://github.com/homebridge-plugins/homebridge-plugin-update-check#readme",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Sunoo/homebridge-plugin-update-check.git"
+    "url": "https://github.com/homebridge-plugins/homebridge-plugin-update-check.git"
   },
   "bugs": {
-    "url": "https://github.com/Sunoo/homebridge-plugin-update-check/issues"
+    "url": "https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues"
   },
   "keywords": [
     "homebridge-plugin",
