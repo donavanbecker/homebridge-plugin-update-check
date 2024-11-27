@@ -1,7 +1,7 @@
-import { PlatformIdentifier, PlatformName } from 'homebridge';
+import type { PlatformIdentifier, PlatformName } from 'homebridge'
 
-export type PluginUpdatePlatformConfig = {
-  platform: PlatformName | PlatformIdentifier;
-  forceNcu?: boolean;
-  sensorType?: string;
-};
+export interface PluginUpdatePlatformConfig {
+  platform: PlatformName | PlatformIdentifier
+  forceNcu?: boolean
+  sensorType?: string
+}

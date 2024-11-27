@@ -1,186 +1,195 @@
-import {
+import type {
   API,
-  APIEvent,
   Characteristic,
   CharacteristicValue,
   DynamicPlatformPlugin,
   HAP,
   Logging,
   PlatformAccessory,
-  PlatformAccessoryEvent,
   PlatformConfig,
   Service,
-  WithUUID
-} from 'homebridge';
-import { spawn } from 'child_process';
-import fs from 'fs';
-import { hostname } from 'os';
-import path from 'path';
-import { PluginUpdatePlatformConfig } from './configTypes';
-import { UiApi } from './ui-api';
+  WithUUID,
+} from 'homebridge'
 
-let hap: HAP;
-let Accessory: typeof PlatformAccessory;
+import type { PluginUpdatePlatformConfig } from './configTypes.js'
 
-const PLUGIN_NAME = 'homebridge-plugin-update-check';
-const PLATFORM_NAME = 'PluginUpdate';
+import { spawn } from 'node:child_process'
+import fs from 'node:fs'
+import { hostname } from 'node:os'
+import path from 'node:path'
+import process from 'node:process'
 
-type SensorInfo = {
-  serviceType: WithUUID<typeof Service>;
-  characteristicType: WithUUID<new () => Characteristic>;
-  trippedValue: CharacteristicValue;
-  untrippedValue: CharacteristicValue;
-};
+import {
+  APIEvent,
+  PlatformAccessoryEvent,
+} from 'homebridge'
+
+import { UiApi } from './ui-api.js'
+
+let hap: HAP
+let Accessory: typeof PlatformAccessory
+
+const PLUGIN_NAME = 'homebridge-plugin-update-check'
+const PLATFORM_NAME = 'PluginUpdate'
+
+interface SensorInfo {
+  serviceType: WithUUID<typeof Service>
+  characteristicType: WithUUID<new () => Characteristic>
+  trippedValue: CharacteristicValue
+  untrippedValue: CharacteristicValue
+}
 
 class PluginUpdatePlatform implements DynamicPlatformPlugin {
-  private readonly log: Logging;
-  private readonly api: API;
-  private readonly config: PluginUpdatePlatformConfig;
-  private readonly uiApi: UiApi;
-  private readonly useNcu: boolean;
-  private readonly isDocker: boolean;
-  private readonly sensorInfo: SensorInfo;
-  private service?: Service;
-  private timer?: NodeJS.Timeout;
+  private readonly log: Logging
+  private readonly api: API
+  private readonly config: PluginUpdatePlatformConfig
+  private readonly uiApi: UiApi
+  private readonly useNcu: boolean
+  private readonly isDocker: boolean
+  private readonly sensorInfo: SensorInfo
+  private service?: Service
+  private timer?: NodeJS.Timeout
 
   constructor(log: Logging, config: PlatformConfig, api: API) {
-    this.log = log;
-    this.config = config as PluginUpdatePlatformConfig;
-    this.api = api;
+    hap = api.hap
+    Accessory = api.platformAccessory
 
-    this.uiApi = new UiApi(this.api.user.storagePath());
-    this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured();
-    this.isDocker = fs.existsSync('/homebridge/package.json');
-    this.sensorInfo = this.getSensorInfo(this.config.sensorType);
+    this.log = log
+    this.config = config as PluginUpdatePlatformConfig
+    this.api = api
 
-    api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this));
+    this.uiApi = new UiApi(this.api.user.storagePath())
+    this.useNcu = this.config.forceNcu || !this.uiApi.isConfigured()
+    this.isDocker = fs.existsSync('/homebridge/package.json')
+    this.sensorInfo = this.getSensorInfo(this.config.sensorType)
+
+    api.on(APIEvent.DID_FINISH_LAUNCHING, this.addUpdateAccessory.bind(this))
   }
 
-  async runNcu(args: Array<string>): Promise<any> { // eslint-disable-line @typescript-eslint/no-explicit-any
+  async runNcu(args: Array<string>): Promise<any> {
     args = [
       path.resolve(__dirname, '../node_modules/npm-check-updates/build/src/bin/cli.js'),
       '--jsonUpgraded',
       '--filter',
-      '/^(@.*\\/)?homebridge(-.*)?$/'
-    ].concat(args);
+      '/^(@.*\\/)?homebridge(-.*)?$/',
+    ].concat(args)
 
     const output = await new Promise<string>((resolve, reject) => {
       try {
         const ncu = spawn(process.argv0, args, {
-          env: this.isDocker ? { ...process.env, HOME: '/homebridge' } : undefined
-        });
-        let stdout = '';
-        ncu.stdout.on('data', (chunk: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-          stdout += chunk.toString();
-        });
-        let stderr = '';
-        ncu.stderr.on('data', (chunk: any) => { // eslint-disable-line @typescript-eslint/no-explicit-any
-          stderr += chunk.toString();
-        });
+          env: this.isDocker ? { ...process.env, HOME: '/homebridge' } : undefined,
+        })
+        let stdout = ''
+        ncu.stdout.on('data', (chunk: any) => {
+          stdout += chunk.toString()
+        })
+        let stderr = ''
+        ncu.stderr.on('data', (chunk: any) => {
+          stderr += chunk.toString()
+        })
         ncu.on('close', () => {
           if (stderr) {
-            reject(stderr);
+            reject(stderr)
           } else {
-            resolve(stdout);
+            resolve(stdout)
           }
-        });
+        })
       } catch (ex) {
-        reject(ex);
+        reject(ex)
       }
-    });
+    })
 
-    return JSON.parse(output);
+    return JSON.parse(output)
   }
 
   async checkNcu(): Promise<number> {
-    let results = await this.runNcu(['--global']);
+    let results = await this.runNcu(['--global'])
 
     if (this.isDocker) {
-      const dockerResults = await this.runNcu(['--packageFile', '/homebridge/package.json']);
-      results = { ...results, ...dockerResults };
+      const dockerResults = await this.runNcu(['--packageFile', '/homebridge/package.json'])
+      results = { ...results, ...dockerResults }
     }
 
-    const updates = Object.keys(results).length;
-    this.log.debug('npm-check-updates reports ' + updates +
-      ' outdated package(s): ' + JSON.stringify(results));
+    const updates = Object.keys(results).length
+    this.log.debug(`npm-check-updates reports ${updates
+    } outdated package(s): ${JSON.stringify(results)}`)
 
-    return updates;
+    return updates
   }
 
   async checkUi(): Promise<number> {
-    const plugins = await this.uiApi.getPlugins();
-    const homebridge = await this.uiApi.getHomebridge();
-    plugins.push(homebridge);
+    const plugins = await this.uiApi.getPlugins()
+    const homebridge = await this.uiApi.getHomebridge()
+    plugins.push(homebridge)
 
-    const results = plugins.filter(plugin => plugin.updateAvailable);
-    this.log.debug('homebridge-config-ui-x reports ' + results.length +
-      ' outdated package(s): ' + JSON.stringify(results));
+    const results = plugins.filter(plugin => plugin.updateAvailable)
+    this.log.debug(`homebridge-config-ui-x reports ${results.length
+    } outdated package(s): ${JSON.stringify(results)}`)
 
-    return results.length;
+    return results.length
   }
 
   doCheck(): void {
     if (this.timer) {
-      clearTimeout(this.timer);
+      clearTimeout(this.timer)
     }
 
-    const check = this.useNcu ? this.checkNcu() : this.checkUi();
+    const check = this.useNcu ? this.checkNcu() : this.checkUi()
 
     check
-      .then(updates => {
-        this.service?.setCharacteristic(this.sensorInfo.characteristicType,
-          updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue);
+      .then((updates) => {
+        this.service?.setCharacteristic(this.sensorInfo.characteristicType, updates ? this.sensorInfo.trippedValue : this.sensorInfo.untrippedValue)
       })
-      .catch(ex => {
-        this.log.error(ex);
+      .catch((ex) => {
+        this.log.error(ex)
       })
-      .finally(((): void => {
-        this.timer = setTimeout(this.doCheck.bind(this), 8 * 60 * 60 * 1000);
-      }).bind(this));
+      .finally((): void => {
+        this.timer = setTimeout(this.doCheck.bind(this), 8 * 60 * 60 * 1000)
+      })
   }
 
   checkService(accessory: PlatformAccessory, serviceType: WithUUID<typeof Service>): boolean {
-    const service = accessory.getService(serviceType);
-    if (this.sensorInfo.serviceType == serviceType) {
+    const service = accessory.getService(serviceType)
+    if (this.sensorInfo.serviceType === serviceType) {
       if (service) {
-        this.service = service;
+        this.service = service
       } else {
-        this.service = accessory.addService(serviceType);
+        this.service = accessory.addService(serviceType as unknown as Service)
       }
-      return true;
+      return true
     } else {
       if (service) {
-        accessory.removeService(service);
+        accessory.removeService(service)
       }
-      return false;
+      return false
     }
   }
 
   configureAccessory(accessory: PlatformAccessory): void {
     accessory.on(PlatformAccessoryEvent.IDENTIFY, () => {
-      this.log(accessory.displayName + ' identify requested!');
-    });
+      this.log(`${accessory.displayName} identify requested!`)
+    })
 
-    const accInfo = accessory.getService(hap.Service.AccessoryInformation);
+    const accInfo = accessory.getService(hap.Service.AccessoryInformation)
     if (accInfo) {
       accInfo
         .setCharacteristic(hap.Characteristic.Manufacturer, 'Homebridge')
         .setCharacteristic(hap.Characteristic.Model, 'Plugin Update Check')
-        .setCharacteristic(hap.Characteristic.SerialNumber, hostname());
+        .setCharacteristic(hap.Characteristic.SerialNumber, hostname())
     }
 
-    this.checkService(accessory, hap.Service.MotionSensor);
-    this.checkService(accessory, hap.Service.ContactSensor);
-    this.checkService(accessory, hap.Service.OccupancySensor);
-    this.checkService(accessory, hap.Service.SmokeSensor);
-    this.checkService(accessory, hap.Service.LeakSensor);
-    this.checkService(accessory, hap.Service.LightSensor);
-    this.checkService(accessory, hap.Service.HumiditySensor);
-    this.checkService(accessory, hap.Service.CarbonMonoxideSensor);
-    this.checkService(accessory, hap.Service.CarbonDioxideSensor);
-    this.checkService(accessory, hap.Service.AirQualitySensor);
+    this.checkService(accessory, hap.Service.MotionSensor)
+    this.checkService(accessory, hap.Service.ContactSensor)
+    this.checkService(accessory, hap.Service.OccupancySensor)
+    this.checkService(accessory, hap.Service.SmokeSensor)
+    this.checkService(accessory, hap.Service.LeakSensor)
+    this.checkService(accessory, hap.Service.LightSensor)
+    this.checkService(accessory, hap.Service.HumiditySensor)
+    this.checkService(accessory, hap.Service.CarbonMonoxideSensor)
+    this.checkService(accessory, hap.Service.CarbonDioxideSensor)
+    this.checkService(accessory, hap.Service.AirQualitySensor)
 
-    /*const motionService = accessory.getService(hap.Service.MotionSensor);
+    /* const motionService = accessory.getService(hap.Service.MotionSensor);
     const contactService = accessory.getService(hap.Service.ContactSensor);
     const occupancyService = accessory.getService(hap.Service.OccupancySensor);
     const smokeService = accessory.getService(hap.Service.SmokeSensor);
@@ -240,24 +249,24 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
       this.service = airService;
     } else if (airService) {
       accessory.removeService(airService);
-    }*/
+    } */
 
-    this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue);
+    this.service?.setCharacteristic(this.sensorInfo.characteristicType, this.sensorInfo.untrippedValue)
   }
 
   addUpdateAccessory(): void {
     if (!this.service) {
-      const uuid = hap.uuid.generate(PLATFORM_NAME);
-      const newAccessory = new Accessory('Plugin Update Check', uuid);
+      const uuid = hap.uuid.generate(PLATFORM_NAME)
+      const newAccessory = new Accessory('Plugin Update Check', uuid)
 
-      newAccessory.addService(this.sensorInfo.serviceType);
+      newAccessory.addService(this.sensorInfo.serviceType as unknown as Service)
 
-      this.configureAccessory(newAccessory);
+      this.configureAccessory(newAccessory)
 
-      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory]);
+      this.api.registerPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [newAccessory])
     }
 
-    this.timer = setTimeout(this.doCheck.bind(this), 60 * 1000); // Oznu recommends waiting 60 seconds on start
+    this.timer = setTimeout(this.doCheck.bind(this), 60 * 1000) // Oznu recommends waiting 60 seconds on start
   }
 
   getSensorInfo(sensorType?: string): SensorInfo {
@@ -267,79 +276,77 @@ class PluginUpdatePlatform implements DynamicPlatformPlugin {
           serviceType: hap.Service.ContactSensor,
           characteristicType: hap.Characteristic.ContactSensorState,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'occupancy':
         return {
           serviceType: hap.Service.OccupancySensor,
           characteristicType: hap.Characteristic.OccupancyDetected,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'smoke':
         return {
           serviceType: hap.Service.SmokeSensor,
           characteristicType: hap.Characteristic.SmokeDetected,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'leak':
         return {
           serviceType: hap.Service.LeakSensor,
           characteristicType: hap.Characteristic.LeakDetected,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'light':
         return {
           serviceType: hap.Service.LightSensor,
           characteristicType: hap.Characteristic.CurrentAmbientLightLevel,
           untrippedValue: 0.0001,
-          trippedValue: 100000
-        };
+          trippedValue: 100000,
+        }
       case 'humidity':
         return {
           serviceType: hap.Service.HumiditySensor,
           characteristicType: hap.Characteristic.CurrentRelativeHumidity,
           untrippedValue: 0,
-          trippedValue: 100
-        };
+          trippedValue: 100,
+        }
       case 'monoxide':
         return {
           serviceType: hap.Service.CarbonMonoxideSensor,
           characteristicType: hap.Characteristic.CarbonMonoxideDetected,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'dioxide':
         return {
           serviceType: hap.Service.CarbonDioxideSensor,
           characteristicType: hap.Characteristic.CarbonDioxideDetected,
           untrippedValue: 0,
-          trippedValue: 1
-        };
+          trippedValue: 1,
+        }
       case 'air':
         return {
           serviceType: hap.Service.AirQualitySensor,
           characteristicType: hap.Characteristic.AirQuality,
           untrippedValue: 1,
-          trippedValue: 5
-        };
+          trippedValue: 5,
+        }
       case 'motion':
       default:
         return {
           serviceType: hap.Service.MotionSensor,
           characteristicType: hap.Characteristic.MotionDetected,
           untrippedValue: false,
-          trippedValue: true
-        };
+          trippedValue: true,
+        }
     }
   }
 }
 
-export = (api: API): void => {
-  hap = api.hap;
-  Accessory = api.platformAccessory;
-
-  api.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, PluginUpdatePlatform);
-};
+// Register our platform with homebridge.
+export default (api: API): void => {
+  api.registerPlatform(PLUGIN_NAME, PLATFORM_NAME, PluginUpdatePlatform)
+}
