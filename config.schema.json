@@ -1,73 +1,75 @@
 {
-    "pluginAlias": "PluginUpdate",
-    "pluginType": "platform",
-    "singular": true,
-    "headerDisplay": "A Homebridge plugin for checking for updates to Homebridge and plugins.",
-    "footerDisplay": "Raise [Issues](https://github.com/Sunoo/homebridge-plugin-update-check/issues) or submit [Pull Requests](https://github.com/Sunoo/homebridge-plugin-update-check/pulls) on [Project Page](https://github.com/Sunoo/homebridge-plugin-update-check).",
-    "schema": {
-        "type": "object",
-        "properties": {
-            "name": {
-                "title": "Name",
-                "type": "string",
-                "required": true,
-                "default": "Plugin Update",
-                "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit."
-            },
-            "sensorType": {
-                "title": "Sensor Type",
-                "type": "string",
-                "required": true,
-                "default": "motion",
-                "description": "What type of sensor will be exposed to HomeKit.",
-                "oneOf": [
-                    {
-                      "title": "Motion Sensor",
-                      "enum": [ "motion" ]
-                    },
-                    {
-                      "title": "Contact Sensor",
-                      "enum": [ "contact" ]
-                    },
-                    {
-                      "title": "Occupancy Sensor",
-                      "enum": [ "occupancy" ]
-                    },
-                    {
-                      "title": "Humidity Sensor",
-                      "enum": [ "humidity" ]
-                    },
-                    {
-                      "title": "Light Sensor",
-                      "enum": [ "light" ]
-                    },
-                    {
-                      "title": "Air Quality Sensor",
-                      "enum": [ "air" ]
-                    },
-                    {
-                      "title": "Leak Sensor",
-                      "enum": [ "leak" ]
-                    },
-                    {
-                      "title": "Smoke Sensor",
-                      "enum": [ "smoke" ]
-                    },
-                    {
-                      "title": "Carbon Dioxide Sensor",
-                      "enum": [ "dioxide" ]
-                    },
-                    {
-                      "title": "Carbon Monoxide Sensor",
-                      "enum": [ "monoxide" ]
-                    }
-                  ]
-            },
-            "forceNcu": {
-                "title": "Force npm-check-updates",
-                "type": "boolean",
-                "description": "Force use of node-check-updates instead of homebridge-config-ui-x."
-            }
-        }
+  "pluginAlias": "PluginUpdate",
+  "pluginType": "platform",
+  "singular": true,
+  "customUi": true,
+  "customUiPath": "./dist/homebridge-ui",
+  "headerDisplay": "A Homebridge plugin for checking for updates to Homebridge and plugins.",
+  "footerDisplay": "Raise [Issues](https://github.com/Sunoo/homebridge-plugin-update-check/issues) or submit [Pull Requests](https://github.com/Sunoo/homebridge-plugin-update-check/pulls) on [Project Page](https://github.com/Sunoo/homebridge-plugin-update-check).",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "required": true,
+        "default": "Plugin Update",
+        "description": "A unique name for the accessory. It will be used as the accessory name in HomeKit."
+      },
+      "sensorType": {
+        "title": "Sensor Type",
+        "type": "string",
+        "required": true,
+        "default": "motion",
+        "description": "What type of sensor will be exposed to HomeKit.",
+        "oneOf": [
+          {
+            "title": "Motion Sensor",
+            "enum": ["motion"]
+          },
+          {
+            "title": "Contact Sensor",
+            "enum": ["contact"]
+          },
+          {
+            "title": "Occupancy Sensor",
+            "enum": ["occupancy"]
+          },
+          {
+            "title": "Humidity Sensor",
+            "enum": ["humidity"]
+          },
+          {
+            "title": "Light Sensor",
+            "enum": ["light"]
+          },
+          {
+            "title": "Air Quality Sensor",
+            "enum": ["air"]
+          },
+          {
+            "title": "Leak Sensor",
+            "enum": ["leak"]
+          },
+          {
+            "title": "Smoke Sensor",
+            "enum": ["smoke"]
+          },
+          {
+            "title": "Carbon Dioxide Sensor",
+            "enum": ["dioxide"]
+          },
+          {
+            "title": "Carbon Monoxide Sensor",
+            "enum": ["monoxide"]
+          }
+        ]
+      },
+      "forceNcu": {
+        "title": "Force npm-check-updates",
+        "type": "boolean",
+        "description": "Force use of node-check-updates instead of homebridge-config-ui-x."
+      }
     }
+  }
 }

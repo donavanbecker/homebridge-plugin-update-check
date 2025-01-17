@@ -1,18 +1,9 @@
 {
+  "name": "@homebridge-plugins/homebridge-plugin-update-check",
   "displayName": "Homebridge Plugin Update Check",
-  "name": "homebridge-plugin-update-check",
-  "version": "1.0.2",
+  "type": "module",
+  "version": "2.0.0",
   "description": "A Homebridge plugin for checking for updates to Homebridge and plugins",
-  "main": "dist/index.js",
-  "repository": {
-    "type": "git",
-    "url": "git://github.com/Sunoo/homebridge-plugin-update-check.git"
-  },
-  "keywords": [
-    "homebridge-plugin",
-    "plugin",
-    "update"
-  ],
   "author": "David Maher",
   "license": "BSD-2-Clause",
   "funding": [
@@ -33,45 +24,74 @@
       "url": "https://liberapay.com/Sunoo"
     }
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/homebridge-plugins/homebridge-plugin-update-check#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/homebridge-plugins/homebridge-plugin-update-check.git"
+  },
   "bugs": {
-    "url": "https://github.com/Sunoo/homebridge-plugin-update-check/issues"
+    "url": "https://github.com/homebridge-plugins/homebridge-plugin-update-check/issues"
   },
-  "homepage": "https://github.com/Sunoo/homebridge-plugin-update-check#readme",
-  "scripts": {
-    "clean": "rimraf ./dist",
-    "build": "rimraf ./dist && tsc",
-    "lint": "eslint **/*.ts --fix",
-    "lint-check": "eslint **/*.ts",
-    "prepare": "npm run build",
-    "prepublishOnly": "npm run lint-check",
-    "postpublish": "npm run clean",
-    "watch": "npm run clean && tsc --watch"
-  },
-  "devDependencies": {
-    "@types/fs-extra": "^9.0.13",
-    "@types/jsonwebtoken": "^8.5.8",
-    "@types/node": "^17.0.23",
-    "@typescript-eslint/eslint-plugin": "^5.16.0",
-    "@typescript-eslint/parser": "^5.16.0",
-    "eslint": "^8.12.0",
-    "homebridge": "^1.4.0",
-    "rimraf": "^3.0.2",
-    "typescript": "^4.6.3"
-  },
+  "keywords": [
+    "homebridge-plugin",
+    "plugin",
+    "update"
+  ],
+  "main": "dist/index.js",
   "files": [
+    "LICENSE",
+    "README.md",
     "config.schema.json",
     "dist/**/*",
-    "LICENSE",
-    "package.json",
-    "README.md"
+    "package.json"
   ],
   "engines": {
-    "node": ">=10",
-    "homebridge": ">=1.0.0"
+    "homebridge": "^1.8.5 || ^2.0.0 || ^2.0.0-beta.23 || ^2.0.0-alpha.37",
+    "node": "^20 || ^22"
+  },
+  "scripts": {
+    "check": "npm install && npm outdated",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "watch": "npm run build && npm run plugin-ui && npm link && nodemon",
+    "plugin-ui": "rsync ./src/homebridge-ui/public/index.html ./dist/homebridge-ui/public/",
+    "build": "npm run clean && tsc && npm run plugin-ui",
+    "prepublishOnly": "npm run lint && npm run build && npm run plugin-ui && npm run docs && npm run lint-docs",
+    "postpublish": "npm run clean && npm ci",
+    "clean": "shx rm -rf ./dist",
+    "test": "npm run lint",
+    "docs": "typedoc",
+    "lint-docs": "typedoc --emit none --treatWarningsAsErrors"
   },
   "dependencies": {
-    "axios": "^0.26.1",
-    "jsonwebtoken": "^8.5.1",
-    "npm-check-updates": "^12.5.4"
+    "@homebridge/plugin-ui-utils": "^2.0.0",
+    "axios": "^1.7.8",
+    "jsonwebtoken": "^9.0.2",
+    "npm-check-updates": "^17.1.14"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^3.14.0",
+    "@types/aes-js": "^3.1.4",
+    "@types/debug": "^4.1.12",
+    "@types/fs-extra": "^11.0.4",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^22.10.6",
+    "@types/semver": "^7.5.8",
+    "@types/source-map-support": "^0.5.10",
+    "@typhonjs-typedoc/typedoc-theme-dmt": "^0.3.1",
+    "@vitest/coverage-v8": "^3.0.1",
+    "eslint": "^9.18.0",
+    "eslint-plugin-format": "^1.0.1",
+    "homebridge": "^1.8.5",
+    "homebridge-config-ui-x": "4.68.0",
+    "nodemon": "^3.1.9",
+    "shx": "^0.3.4",
+    "ts-node": "^10.9.2",
+    "typedoc": "^0.27.6",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.1"
   }
 }
