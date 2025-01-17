@@ -116,6 +116,6 @@ export class UiApi {
       this.token = undefined
     }, 30 * 1000)
 
-    return this.token
+    return this.token as string
   }
 }
